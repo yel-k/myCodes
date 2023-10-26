@@ -57,7 +57,6 @@ def button_click(num,root2):
         level=2
     elif num==3:
         level=3
-    root2.withdraw()
     root2.destroy()
     rt1()
 
