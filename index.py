@@ -45,8 +45,8 @@ def biggestContours(contours, num=5):
             if len(approx) == 4:
                 biggest_contours.append(approx)
     return biggest_contours
-def checkResult():
-    date_time,transaction_no,amount=performOCR('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
+def checkResult(path):
+    date_time,transaction_no,amount=performOCR(path)
     #confirm from database
     conn=mysql.connector.connect(host='localhost',user='root',password='root',database='pay_check')
     mycursor=conn.cursor()
@@ -59,6 +59,13 @@ def checkResult():
         return True
     else:
         return False
+def rotateImage():
+    rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
+    img=Image.open('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
+    for i in range(1,4):
+        rotated_img=img.rotate(90*i,expand=True)
+        rotated_img.save(rted_path)
+        if checkResult(rted_path):return True
 def enhanceImage(file_path):
     img = cv2.imread(file_path)
     original_image=img.copy()
@@ -90,18 +97,24 @@ def enhanceImage(file_path):
         left_height = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) + ((top_left[1] - bottom_left[1]) ** 2))
         # Output image size
         max_width = max(int(bottom_width), int(top_width))
-        # max_height = max(int(right_height), int(left_height))
         max_height = max(int(left_height), int(right_height))
+        if max_width>max_height/1.5:
+            max_height = max_width//2
         # Desired points values in the output image
         converted_points = np.float32([[0, 0], [max_width, 0], [0, max_height], [max_width, max_height]])
         # Perspective transformation
         matrix = cv2.getPerspectiveTransform(input_points, converted_points)
         img_output = cv2.warpPerspective(original_image, matrix, (max_width, max_height))
-        cv2.imwrite('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg', img_output)
-        to_stop=checkResult()
+        enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
+        rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
+        cv2.imwrite(enhance_path, img_output)
+        to_stop=checkResult(enhance_path)
         if to_stop:
             break
-    return 'C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
+        else:
+            if rotateImage():
+                return rted_path
+    return enhance_path
 def clearTreeview(tree):
     for item in tree.get_children():
         tree.delete(item)

@@ -32,7 +32,7 @@ def biggest_contour(contours):
     max_area = 0
     for i in contours:
         area = cv2.contourArea(i)
-        if area > 10000:
+        if area > 1000:
             peri = cv2.arcLength(i, True)
             approx = cv2.approxPolyDP(i, 0.015 * peri, True)
             if area > max_area and len(approx) == 4:
@@ -67,11 +67,11 @@ dilated = cv2.dilate(edged, kernel, iterations=1)
 # Contour detection
 contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 contours = sorted(contours, key=cv2.contourArea, reverse=True)[:10]
-peri = cv2.arcLength(contours[2], True)
-biggest=cv2.approxPolyDP(contours[2], 0.015 * peri, True)
+peri = cv2.arcLength(contours[0], True)
+biggest=cv2.approxPolyDP(contours[0], 0.015 * peri, True)
 # for i in contours:
 #     cv2.drawContours(img,[i],-1,(0,255,0),3)
-cv2.drawContours(img,[contours[2]],-1,(0,255,0),3)
+cv2.drawContours(img,[contours[0]],-1,(0,255,0),3)
 
 # Pixel values in the original image
 points = biggest.reshape(4, 2)
@@ -95,7 +95,9 @@ left_height = np.sqrt(((top_left[0] - bottom_left[0]) ** 2) + ((top_left[1] - bo
 max_width = max(int(bottom_width), int(top_width))
 # max_height = max(int(right_height), int(left_height))
 max_height = max(int(left_height), int(right_height))
-
+if max_width>max_height/1.5:
+    max_height = max_width//2
+print(max_width,max_height)
 # Desired points values in the output image
 converted_points = np.float32([[0, 0], [max_width, 0], [0, max_height], [max_width, max_height]])
 
