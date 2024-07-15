@@ -1,14 +1,9 @@
+import os
 
-from PIL import Image
+rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
 
-# Open an image file
-with Image.open("C:/Users/htike/OneDrive/Pictures/kpay3.jpg") as img:
-    # Rotate the image by 45 degrees
-    rotated_img = img.rotate(90)
-
-    # Save the rotated image
-    
-
-# Display the original and rotated images
-img.show()
-rotated_img.show()
+if os.path.exists(rted_path):
+    os.remove(rted_path)
+    print("File deleted successfully")
+else:
+    print("The file does not exist")
