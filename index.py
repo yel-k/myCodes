@@ -102,9 +102,13 @@ def enhanceImage(file_path,double_height):
         max_width = max(int(bottom_width), int(top_width))
         max_height = max(int(left_height), int(right_height))
         if double_height:
-            max_height=max_width*2
+            max_width=400
+            max_height=800
+            # max_height=max_width*2
         else:
-            max_height=max_width//2
+            max_width=800
+            max_height=400
+            # max_height=max_width//2
         # Desired points values in the output image
         converted_points = np.float32([[0, 0], [max_width, 0], [0, max_height], [max_width, max_height]])
         # Perspective transformation
@@ -238,12 +242,12 @@ def dragAndDropCustomer(event):
             # Handle errors in loading the image
             messagebox.showerror("Error", f"Failed to load image: {e}")
 #remove images
-rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
-enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
-if os.path.exists(rted_path):
-    os.remove(rted_path)
-if os.path.exists(enhance_path):
-    os.remove(enhance_path)
+# rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
+# enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
+# if os.path.exists(rted_path):
+#     os.remove(rted_path)
+# if os.path.exists(enhance_path):
+#     os.remove(enhance_path)
 root=TkinterDnD.Tk()  
 root.title("Payment Confirmation System")
 root.resizable(False,False)
