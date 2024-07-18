@@ -1,6 +1,6 @@
 import tkinter as tk
 import numpy as np
-import mysql.connector,re,pytesseract,openpyxl,cv2,os
+import mysql.connector,re,pytesseract,openpyxl,cv2
 from tkinter import ttk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from tkinter import filedialog,messagebox
@@ -45,8 +45,7 @@ def biggestContours(contours, num=3):
             if len(approx) == 4:
                 biggest_contours.append(approx)
     return biggest_contours
-def checkResult(path):
-    date_time,transaction_no,amount=performOCR(path)
+def checkResult(transaction_no):
     #confirm from database
     conn=mysql.connector.connect(host='localhost',user='root',password='root',database='pay_check')
     mycursor=conn.cursor()
@@ -56,20 +55,26 @@ def checkResult(path):
     # Fetch the results
     results = mycursor.fetchall()
     if results:
-        return date_time,transaction_no,amount
+        return True
     else:
-        return None,None,None
-def rotateImage():
+        return False
+def rotateImage(transaction_no_arr,transaction_no_count):
     rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
     img=Image.open('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
+    date_time,transaction_no,amount,is_found=None,None,None,False
     for i in range(1,4):
         rotated_img=img.rotate(90*i,expand=True)
         rotated_img.save(rted_path)
-        date_time,transaction_no,amount=checkResult(rted_path)
+        date_time,transaction_no,amount=performOCR(rted_path)
         if transaction_no:
-            return date_time,transaction_no,amount
-    return None,None,None
+            transaction_no_arr.append(transaction_no)
+            transaction_no_count+=1
+            is_found=checkResult(transaction_no)
+            if is_found:
+                return date_time,[transaction_no],amount,is_found,transaction_no_count
+    return date_time,transaction_no_arr,amount,is_found,transaction_no_count
 def enhanceImage(file_path,double_height):
+    date_time,transaction_no_arr,amount,is_found,transaction_no_count=None,[],None,False,0
     img = cv2.imread(file_path)
     original_image=img.copy()
     # Image modification
@@ -116,14 +121,18 @@ def enhanceImage(file_path,double_height):
         img_output = cv2.warpPerspective(original_image, matrix, (max_width, max_height))
         enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
         cv2.imwrite(enhance_path, img_output)
-        date_time,transaction_no,amount=checkResult(enhance_path)
+        date_time,transaction_no,amount=performOCR(enhance_path)
         if transaction_no:
-            return date_time,transaction_no,amount
+            transaction_no_arr.append(transaction_no)
+            transaction_no_count+=1
+            is_found=checkResult(transaction_no)
+            if is_found:
+                return date_time,[transaction_no],amount,is_found,transaction_no_count
         else:
-            date_time,transaction_no,amount=rotateImage()
-            if transaction_no:
-                return date_time,transaction_no,amount
-    return None,None,None
+            date_time,transaction_no,amount,is_found,transaction_no_count=rotateImage(transaction_no_arr,transaction_no_count)
+            if is_found:
+                return date_time,[transaction_no],amount,is_found,transaction_no_count
+    return date_time,transaction_no_arr,amount,is_found,transaction_no_count
 def clearTreeview(tree):
     for item in tree.get_children():
         tree.delete(item)
@@ -183,14 +192,29 @@ def storeFromExcel(file_path):
     messagebox.showinfo("Information","Record Updated!")
     fetchData()
 def storeFromImage(file_path,isSeller=True):
+    date_time,transaction_no,amount=None,None,None
     date_time,transaction_no,amount=performOCR(file_path)
-    if not transaction_no:
-        date_time,transaction_no,amount=enhanceImage(file_path,True)
-    if not transaction_no:
-        date_time,transaction_no,amount=enhanceImage(file_path,False)
-    if not transaction_no:
-        messagebox.showerror("Error","Image can't detect information!!!")
-        exit
+    is_found=False
+    count=0
+    result_tran_arr=[None]
+    if transaction_no:
+        count+=1
+    else:
+        if not transaction_no:
+            date_time,transaction_no_arr,amount,is_found,transaction_no_count=enhanceImage(file_path,True)
+            count+=transaction_no_count
+            for i in range(len(transaction_no_arr)):
+                result_tran_arr.append(transaction_no_arr[i])
+        if not is_found:
+            date_time,transaction_no_arr,amount,is_found,transaction_no_count=enhanceImage(file_path,False)
+            count+=transaction_no_count
+            for i in range(len(transaction_no_arr)):
+                result_tran_arr.append(transaction_no_arr[i])
+        if count==0:
+            messagebox.showerror("Error","Image can't detect information!!!")
+            return
+        if count>0:
+            transaction_no=result_tran_arr[len(result_tran_arr)-1]
     #store data to database
     if transaction_no:
         conn=mysql.connector.connect(host='localhost',user='root',password='root',database='pay_check')
@@ -241,7 +265,7 @@ def dragAndDropCustomer(event):
     except Exception as e:
             # Handle errors in loading the image
             messagebox.showerror("Error", f"Failed to load image: {e}")
-#remove images
+# remove images
 # rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
 # enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
 # if os.path.exists(rted_path):
