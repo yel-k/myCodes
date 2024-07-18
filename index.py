@@ -33,13 +33,13 @@ def performOCR(file_path):
     else:
         amount = None  # or handle the absence of a match appropriately
     return date_time,transaction_no,amount
-def biggestContours(contours, num=3):
+def biggestContours(contours, num=5):
     # Sort contours based on the area in descending order and take the top 'num' contours
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:num]
     biggest_contours = []
     for contour in sorted_contours:
         area = cv2.contourArea(contour)
-        if area > 1000:
+        if area > 50000:
             peri = cv2.arcLength(contour, True)
             approx = cv2.approxPolyDP(contour, 0.015 * peri, True)
             if len(approx) == 4:
