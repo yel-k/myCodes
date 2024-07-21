@@ -8,10 +8,13 @@ from PIL import Image,ImageTk
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 # Function to clear all items from the Treeview
 def performOCR(file_path):
-    # Load the image
-    image = Image.open(file_path)
-    # Perform OCR using PyTesseract
-    text = pytesseract.image_to_string(image,lang='eng+mya')
+    try:
+        # Load the image
+        image = cv2.imread(file_path,0)
+        # Perform OCR using PyTesseract
+        text = pytesseract.image_to_string(image,lang='eng+mya')
+    except:
+        pass
     # Regular expressions to extract the data
     date_time_pattern = r'(\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2})'
     transaction_no_pattern = r'(\d{20})'
@@ -60,13 +63,13 @@ def checkResult(transaction_no):
         return False
 def rotateImage(transaction_no_arr,transaction_no_count):
     rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
-    img=Image.open('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
+    image=cv2.imread('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
     date_time,transaction_no,amount,is_found=None,None,None,False
-    for i in range(1,4):
-        rotated_img=img.rotate(90*i,expand=True)
-        rotated_img.save(rted_path)
-        date_time,transaction_no,amount=performOCR(rted_path)
-        if transaction_no:
+    # Rotate 180 degrees
+    rotated_image = cv2.rotate(image, cv2.ROTATE_180)
+    cv2.imwrite(rted_path,rotated_image)
+    date_time,transaction_no,amount=performOCR(rted_path)
+    if transaction_no:
             transaction_no_arr.append(transaction_no)
             transaction_no_count+=1
             is_found=checkResult(transaction_no)
@@ -80,15 +83,24 @@ def enhanceImage(file_path,double_height):
     # Image modification
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.bilateralFilter(gray, 20, 15, 15)
-    edged = cv2.Canny(gray, 100, 150)
+    edged = cv2.Canny(gray, 10, 150)
+    canny_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/canny_image.jpg'
+    cv2.imwrite(canny_path,edged)
     # Define a kernel (structuring element) for dilation
     kernel = np.ones((5, 5), np.uint8)
     # Apply dilation
     dilated = cv2.dilate(edged, kernel, iterations=1)
+    dilate_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/dilate_image.jpg'
+    cv2.imwrite(dilate_path,dilated)
     # Contour detection
     contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     fivebiggest=biggestContours(contours)
+    contourimg=img.copy()
+    cv2.drawContours(contourimg, fivebiggest, -1, (0, 255, 0), 3)
+    contour_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/contour_image.jpg'
+    cv2.imwrite(contour_path,contourimg)
     for biggest in fivebiggest:
+        # global k
         # Pixel values in the original image
         points = biggest.reshape(4, 2)
         input_points = np.zeros((4, 2), dtype="float32")
@@ -119,8 +131,9 @@ def enhanceImage(file_path,double_height):
         # Perspective transformation
         matrix = cv2.getPerspectiveTransform(input_points, converted_points)
         img_output = cv2.warpPerspective(original_image, matrix, (max_width, max_height))
-        enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
+        enhance_path=f'C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
         cv2.imwrite(enhance_path, img_output)
+        # k+=1
         date_time,transaction_no,amount=performOCR(enhance_path)
         if transaction_no:
             transaction_no_arr.append(transaction_no)
@@ -133,6 +146,7 @@ def enhanceImage(file_path,double_height):
             if is_found:
                 return date_time,[transaction_no],amount,is_found,transaction_no_count
     return date_time,transaction_no_arr,amount,is_found,transaction_no_count
+# k=0
 def clearTreeview(tree):
     for item in tree.get_children():
         tree.delete(item)
@@ -217,6 +231,8 @@ def storeFromImage(file_path,isSeller=True):
             transaction_no=result_tran_arr[len(result_tran_arr)-1]
     #store data to database
     if transaction_no:
+        if isinstance(transaction_no, list):
+            transaction_no=transaction_no[0]
         conn=mysql.connector.connect(host='localhost',user='root',password='root',database='pay_check')
         mycursor=conn.cursor()
         if isSeller:
