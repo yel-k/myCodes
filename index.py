@@ -76,6 +76,66 @@ def rotateImage(transaction_no_arr,transaction_no_count):
             if is_found:
                 return date_time,[transaction_no],amount,is_found,transaction_no_count
     return date_time,transaction_no_arr,amount,is_found,transaction_no_count
+def rotateWithAngle(image_path, angle,transaction_no_arr,transaction_no_count):
+    rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/rt_with_degree.jpg'
+    date_time,transaction_no,amount,is_found=None,None,None,False
+    # Load the image
+    image = cv2.imread(image_path)
+    (h, w) = image.shape[:2]
+    # Calculate the center of the image
+    center = (w // 2, h // 2)
+    # Get the rotation matrix
+    M = cv2.getRotationMatrix2D(center, angle, 1.0)
+    # Perform the rotation
+    rotated_image = cv2.warpAffine(image, M, (w, h))
+    cv2.imwrite(rted_path,rotated_image)
+    date_time,transaction_no,amount=performOCR(rted_path)
+    if transaction_no:
+            transaction_no_arr.append(transaction_no)
+            transaction_no_count+=1
+            is_found=checkResult(transaction_no)
+            if is_found:
+                return date_time,[transaction_no],amount,is_found,transaction_no_count
+    return date_time,transaction_no_arr,amount,is_found,transaction_no_count
+def getAngle(file_path):
+    # Read the image
+    img = cv2.imread(file_path)
+    # Convert the image to grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # Apply edge detection
+    edges = cv2.Canny(gray, 50, 150, apertureSize=3)
+    # Detect lines using Hough Line Transform
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 200)
+    # Initialize variables to find the longest line
+    max_length = 0
+    longest_line = None
+    # Iterate over detected lines
+    for r_theta in lines:
+        r, theta = r_theta[0]
+        a = np.cos(theta)
+        b = np.sin(theta)
+        x0 = a * r
+        y0 = b * r
+        x1 = int(x0 + 1000 * (-b))
+        y1 = int(y0 + 1000 * (a))
+        x2 = int(x0 - 1000 * (-b))
+        y2 = int(y0 - 1000 * (a))
+        # Calculate the length of the line segment
+        length = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+        # Check if the current line is the longest
+        if length > max_length:
+            max_length = length
+            longest_line = (x1, y1, x2, y2)
+        # Draw the line on the image
+        cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
+    # If a longest line was found, calculate its angle
+    if longest_line:
+        x1, y1, x2, y2 = longest_line
+        dx = x2 - x1
+        dy = y2 - y1
+        angle_radians = np.arctan2(dy, dx)
+        angle_degrees = np.degrees(angle_radians)
+        return angle_degrees
 def enhanceImage(file_path,double_height):
     date_time,transaction_no_arr,amount,is_found,transaction_no_count=None,[],None,False,0
     img = cv2.imread(file_path)
@@ -95,6 +155,16 @@ def enhanceImage(file_path,double_height):
     # Contour detection
     contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     fivebiggest=biggestContours(contours)
+    if len(fivebiggest)==0:
+        angle=getAngle(file_path)
+        if angle:
+            quad=90
+            if angle<0:
+                quad=-90
+            for i in range(4):
+                date_time,transaction_no,amount,is_found,transaction_no_count=rotateWithAngle(file_path,angle+(i*quad),transaction_no_arr,transaction_no_count)
+                if is_found:
+                    return date_time,[transaction_no],amount,is_found,transaction_no_count
     contourimg=img.copy()
     cv2.drawContours(contourimg, fivebiggest, -1, (0, 255, 0), 3)
     contour_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/contour_image.jpg'
