@@ -143,7 +143,7 @@ def enhanceImage(file_path,double_height):
     # Image modification
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.bilateralFilter(gray, 20, 15, 15)
-    edged = cv2.Canny(gray, 10, 150)
+    edged = cv2.Canny(gray, 5, 15)
     canny_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/canny_image.jpg'
     cv2.imwrite(canny_path,edged)
     # Define a kernel (structuring element) for dilation
@@ -201,7 +201,7 @@ def enhanceImage(file_path,double_height):
         # Perspective transformation
         matrix = cv2.getPerspectiveTransform(input_points, converted_points)
         img_output = cv2.warpPerspective(original_image, matrix, (max_width, max_height))
-        enhance_path=f'C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
+        enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
         cv2.imwrite(enhance_path, img_output)
         # k+=1
         date_time,transaction_no,amount=performOCR(enhance_path)
