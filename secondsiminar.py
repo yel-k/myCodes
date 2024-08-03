@@ -1,126 +1,19 @@
 import tkinter as tk
 import numpy as np
-import mysql.connector,re,pytesseract,openpyxl,cv2,os
+import mysql.connector,re,pytesseract,openpyxl,cv2
 from tkinter import ttk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from tkinter import filedialog,messagebox
 from PIL import Image,ImageTk
 import time
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-def remove_images():
-    image_paths = [
-        "images/original_image.jpg",
-        "images/canny_image.jpg",
-        "images/dilate_image.jpg",
-        "images/contour_image.jpg",
-        "images/lines_image.jpg"
-    ]
-    for image in image_paths:
-        if os.path.exists(image):
-            os.remove(image)
-    for i in range(20):
-        path=f"images/try{i}.jpg"
-        if os.path.exists(path):
-            os.remove(path)
-def load_image(path, max_size):
-    image = Image.open(path)
-    # Resize while maintaining aspect ratio
-    width, height = image.size
-    ratio = min(max_size[0] / width, max_size[1] / height)
-    new_width = int(width * ratio)
-    new_height = int(height * ratio)
-    image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-    return ImageTk.PhotoImage(image)
-def showLargeImage(path):
-    large_image_window = tk.Toplevel()
-    large_image_window.title("Large Image")
-    max_image_size = (650, 650)
-    img = load_image(path, max_size=max_image_size)
-    label = tk.Label(large_image_window, image=img)
-    label.pack()
-    large_image_window.mainloop()
-def showLargeSlideShow():
-    large_slide_window = tk.Toplevel()
-    large_slide_window.title("Large Image")
-    large_slide_window.resizable(False,False)
-    large_slide_window.geometry("650x650")
-    img=[]
-    max_image_size = (650, 650)
-    for i in range(20):
-        path=f"images/try{i}.jpg"
-        if os.path.exists(path):
-            img.append(load_image(path, max_size=max_image_size))
-        else:
-            break
-    def display_image(index):
-        if index < len(images):
-            label.config(image=img[index])
-            large_slide_window.after(1000, lambda: display_image(index + 1))
-    # Initial label to display the first image
-    label = tk.Label(large_slide_window)
-    label.pack(side=tk.LEFT, padx=5, pady=5)
-    # Start displaying images
-    display_image(0)
-    large_slide_window.mainloop()
-def showProcessStages(file_path):
-    # Function to load and resize image with aspect ratio\
-    toplevel=tk.Toplevel()
-    toplevel.title("Display Images")
-    toplevel.resizable(False,False)
-    toplevel.geometry("1300x600")
-    # Maximum size for the images (adjust as needed)
-    max_image_size = (250, 500)
-    four_img=[]
-    image_paths = [
-        "images/original_image.jpg",
-        "images/canny_image.jpg",
-        "images/dilate_image.jpg",
-        "images/contour_image.jpg",
-        "images/lines_image.jpg"
-    ]
-    label_arr=["original image","canny image","after dilation","contour image","lines image"]
-    try:
-        for path in image_paths:
-            if os.path.exists(path):
-                img = load_image(path, max_size=max_image_size)
-                four_img.append((img, path))
-    except:
-        pass
-    labels=[]
-    for img,path in four_img:
-        label = tk.Label(toplevel, image=img)
-        # Keep a reference to the image to prevent garbage collection
-        label.image = img
-        label.pack(side=tk.LEFT, padx=5, pady=5)
-        label.bind("<Button-1>", lambda e, path=path: showLargeImage(path))  # Bind click event to show the image in a new window
-        labels.append(label)
-    # Function to display images one after another
-    def display_image(index):
-        if index < len(images):
-            label.config(image=images[index])
-            label.bind("<Button-1>", lambda e: showLargeSlideShow())  # Bind click event to show the image in a new window
-            toplevel.after(500, lambda: display_image(index + 1))
-    # Initial label to display the first image
-    label = tk.Label(toplevel)
-    label.pack(side=tk.LEFT, padx=5, pady=5)
-    # Start displaying images
-    display_image(0)
-    toplevel.mainloop()
+# Function to clear all items from the Treeview
 def performOCR(file_path):
-    global k
     try:
-        try_path=f"images/try{k}.jpg"
-        # Maximum size for the images (adjust as needed)
-        max_image_size = (250, 500)
-        img = load_image(file_path, max_size=max_image_size)
-        images.append(img)
         # Load the image
-        image = cv2.imread(file_path)
-        cv2.imwrite(try_path,image)
-        k+=1
-        gray_image=cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        image = cv2.imread(file_path,0)
         # Perform OCR using PyTesseract
-        text = pytesseract.image_to_string(gray_image,lang='eng+mya')
+        text = pytesseract.image_to_string(image,lang='eng+mya')
     except:
         pass
     # Regular expressions to extract the data
@@ -170,8 +63,8 @@ def checkResult(transaction_no):
     else:
         return False
 def rotateImage(transaction_no_arr,transaction_no_count):
-    rted_path='images/enhanced_image_rt.jpg'
-    image=cv2.imread('images/enhanced_image.jpg')
+    rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image_rt.jpg'
+    image=cv2.imread('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg')
     date_time,transaction_no,amount,is_found=None,None,None,False
     # Rotate 180 degrees
     rotated_image = cv2.rotate(image, cv2.ROTATE_180)
@@ -185,7 +78,7 @@ def rotateImage(transaction_no_arr,transaction_no_count):
                 return date_time,[transaction_no],amount,is_found,transaction_no_count
     return date_time,transaction_no_arr,amount,is_found,transaction_no_count
 def rotateWithAngle(image_path, angle,transaction_no_arr,transaction_no_count):
-    rted_path='images/rt_with_degree.jpg'
+    rted_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/rt_with_degree.jpg'
     date_time,transaction_no,amount,is_found=None,None,None,False
     # Load the image
     image = cv2.imread(image_path)
@@ -236,8 +129,6 @@ def getAngle(file_path):
             longest_line = (x1, y1, x2, y2)
         # Draw the line on the image
         cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
-        output_file_path = "images/lines_image.jpg"
-        cv2.imwrite(output_file_path, img)
     # If a longest line was found, calculate its angle
     if longest_line:
         x1, y1, x2, y2 = longest_line
@@ -253,14 +144,14 @@ def enhanceImage(file_path,double_height):
     # Image modification
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     gray = cv2.bilateralFilter(gray, 20, 15, 15)
-    edged = cv2.Canny(gray, 100, 150)
-    canny_path='images/canny_image.jpg'
+    edged = cv2.Canny(gray, 5, 15)
+    canny_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/canny_image.jpg'
     cv2.imwrite(canny_path,edged)
     # Define a kernel (structuring element) for dilation
     kernel = np.ones((5, 5), np.uint8)
     # Apply dilation
     dilated = cv2.dilate(edged, kernel, iterations=1)
-    dilate_path='images/dilate_image.jpg'
+    dilate_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/dilate_image.jpg'
     cv2.imwrite(dilate_path,dilated)
     # Contour detection
     contours, hierarchy = cv2.findContours(dilated.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -277,7 +168,7 @@ def enhanceImage(file_path,double_height):
                     return date_time,[transaction_no],amount,is_found,transaction_no_count
     contourimg=img.copy()
     cv2.drawContours(contourimg, fivebiggest, -1, (0, 255, 0), 3)
-    contour_path='images/contour_image.jpg'
+    contour_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/contour_image.jpg'
     cv2.imwrite(contour_path,contourimg)
     for biggest in fivebiggest:
         # global k
@@ -311,7 +202,7 @@ def enhanceImage(file_path,double_height):
         # Perspective transformation
         matrix = cv2.getPerspectiveTransform(input_points, converted_points)
         img_output = cv2.warpPerspective(original_image, matrix, (max_width, max_height))
-        enhance_path='images/enhanced_image.jpg'
+        enhance_path='C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/enhanced_image.jpg'
         cv2.imwrite(enhance_path, img_output)
         # k+=1
         date_time,transaction_no,amount=performOCR(enhance_path)
@@ -326,6 +217,7 @@ def enhanceImage(file_path,double_height):
             if is_found:
                 return date_time,[transaction_no],amount,is_found,transaction_no_count
     return date_time,transaction_no_arr,amount,is_found,transaction_no_count
+# k=0
 def clearTreeview(tree):
     for item in tree.get_children():
         tree.delete(item)
@@ -386,11 +278,6 @@ def storeFromExcel(file_path):
     fetchData()
 def storeFromImage(file_path,isSeller=True):
     start_time=time.time()
-    global k
-    k=0
-    remove_images()
-    img = cv2.imread(file_path)
-    cv2.imwrite("images/original_image.jpg",img)
     date_time,transaction_no,amount=None,None,None
     date_time,transaction_no,amount=performOCR(file_path)
     is_found=False
@@ -457,24 +344,18 @@ def dragAndDropSeller(event):
     file_path = event.data.strip('{').strip('}')
     storeData(file_path)
 def clickCustomer(event):
-    global images
     # Open file dialog and select an image file
     file_path = filedialog.askopenfilename()
     if file_path:
         try:
-            images=[]
             storeFromImage(file_path,False)
-            showProcessStages(file_path)
         except Exception as e:
             # Handle errors in loading the image
             messagebox.showerror("Error", f"Failed to load image: {e}")
 def dragAndDropCustomer(event):
-    global images
     file_path = event.data.strip('{').strip('}')
     try:
-        images=[]
-        storeFromImage(file_path,False)  
-        showProcessStages(file_path) 
+        storeFromImage(file_path,False)   
     except Exception as e:
             # Handle errors in loading the image
             messagebox.showerror("Error", f"Failed to load image: {e}")
@@ -485,8 +366,6 @@ def dragAndDropCustomer(event):
 #     os.remove(rted_path)
 # if os.path.exists(enhance_path):
 #     os.remove(enhance_path)
-images=[]
-k=0
 root=TkinterDnD.Tk()  
 root.title("Payment Confirmation System")
 root.resizable(False,False)
@@ -527,5 +406,5 @@ labeldd2.bind("<Button-1>", clickCustomer)
 labeldd2.drop_target_register(DND_FILES)
 labeldd2.dnd_bind('<<Drop>>',dragAndDropCustomer)
 fetchData()
-# Run the application   
+# Run the application    
 root.mainloop()
