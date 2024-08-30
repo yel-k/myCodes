@@ -65,7 +65,7 @@ def showLargeSlideShow():
 def showProcessStages(file_path):
     # Function to load and resize image with aspect ratio\
     toplevel=tk.Toplevel()
-    toplevel.title("Display Images")
+    toplevel.title("Process Stages")
     toplevel.resizable(False,False)
     toplevel.geometry("1300x600")
     # Maximum size for the images (adjust as needed)
@@ -507,9 +507,9 @@ frame.pack(padx=10, pady=10, fill=tk.X)
 # Configure the columns to expand
 frame.columnconfigure(0, weight=1)
 frame.columnconfigure(1, weight=1)
-labelseller=tk.Label(frame,text="Upload Seller Data")
+labelseller=tk.Label(frame,text="Upload Recipient Data")
 labelseller.grid(row=2, column=0, columnspan=1)
-labelcustomer=tk.Label(frame,text="Upload Customer Data")
+labelcustomer=tk.Label(frame,text="Upload Sender Data")
 labelcustomer.grid(row=2, column=1, columnspan=1)
 # Load the image using Pillow
 image = Image.open('C:/Users/htike/OneDrive/Documents/Payment Confirmation System/images/drag-drop-upload.jpg')
