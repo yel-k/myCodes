@@ -13,7 +13,11 @@ def remove_images():
         "images/canny_image.jpg",
         "images/dilate_image.jpg",
         "images/contour_image.jpg",
-        "images/lines_image.jpg"
+        "images/lines_image.jpg",
+        "images/enhanced_image.jpg",
+        "images/enhanced_image_rt.jpg",
+        "images/original_image.jpg",
+        "images/rt_with_degree.jpg"
     ]
     for image in image_paths:
         if os.path.exists(image):
@@ -52,22 +56,32 @@ def showLargeSlideShow():
             img.append(load_image(path, max_size=max_image_size))
         else:
             break
-    def display_image(index):
-        if index < len(images):
-            label.config(image=img[index])
-            large_slide_window.after(1000, lambda: display_image(index + 1))
+    current_image_index = 0  # Track the current image index
+    def display_image():
+        nonlocal current_image_index
+        if current_image_index < len(img):
+            label.config(image=img[current_image_index])
+            current_image_index += 1
+        if current_image_index >= len(img):
+            current_image_index = 0  # Reset index to loop the slideshow
+
     # Initial label to display the first image
     label = tk.Label(large_slide_window)
     label.pack(side=tk.LEFT, padx=5, pady=5)
-    # Start displaying images
-    display_image(0)
+
+    # Bind the click event on the label to show the next image
+    label.bind("<Button-1>", lambda event: display_image())
+
+    # Display the first image initially
+    if img:
+        display_image()
     large_slide_window.mainloop()
 def showProcessStages(file_path):
     # Function to load and resize image with aspect ratio\
     toplevel=tk.Toplevel()
     toplevel.title("Process Stages")
     toplevel.resizable(False,False)
-    toplevel.geometry("1300x600")
+    toplevel.geometry("1350x600")
     # Maximum size for the images (adjust as needed)
     max_image_size = (250, 500)
     four_img=[]
@@ -78,7 +92,6 @@ def showProcessStages(file_path):
         "images/contour_image.jpg",
         "images/lines_image.jpg"
     ]
-    label_arr=["original image","canny image","after dilation","contour image","lines image"]
     try:
         for path in image_paths:
             if os.path.exists(path):
@@ -86,14 +99,18 @@ def showProcessStages(file_path):
                 four_img.append((img, path))
     except:
         pass
-    labels=[]
-    for img,path in four_img:
-        label = tk.Label(toplevel, image=img)
-        # Keep a reference to the image to prevent garbage collection
-        label.image = img
-        label.pack(side=tk.LEFT, padx=5, pady=5)
-        label.bind("<Button-1>", lambda e, path=path: showLargeImage(path))  # Bind click event to show the image in a new window
-        labels.append(label)
+    for img, path in four_img:
+        frame = tk.Frame(toplevel)  # Create a frame to hold image and label
+        frame.pack(side=tk.LEFT, padx=8, pady=10)
+        # Image label
+        label = tk.Label(frame, image=img)
+        label.image = img  # Keep a reference to the image to prevent garbage collection
+        label.pack()
+        # Text label
+        text_label = tk.Label(frame, text=os.path.splitext(os.path.basename(path))[0])
+        text_label.pack()
+        # Bind click event to the image label
+        label.bind("<Button-1>", lambda e, path=path: showLargeImage(path))
     # Function to display images one after another
     def display_image(index):
         if index < len(images):
