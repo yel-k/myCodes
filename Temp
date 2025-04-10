@@ -1,0 +1,92 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+class PaymentQrScreen extends StatefulWidget {
+  const PaymentQrScreen({super.key});
+
+  @override
+  State<PaymentQrScreen> createState() => _PaymentQrScreenState();
+}
+
+class _PaymentQrScreenState extends State<PaymentQrScreen> {
+  Duration countdownDuration = const Duration(minutes: 3);
+  Timer? timer;
+
+  @override
+  void initState() {
+    super.initState();
+    startCountdown();
+  }
+
+  void startCountdown() {
+    timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        if (countdownDuration.inSeconds > 0) {
+          countdownDuration -= const Duration(seconds: 1);
+        } else {
+          timer?.cancel();
+          Navigator.pop(context);
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  String formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Payment QR')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Demo QR Image
+            Image.asset(
+              'assets/demo_qr.png', // Replace with your demo image asset path
+              width: 200,
+              height: 200,
+              fit: BoxFit.contain,
+            ),
+            const SizedBox(height: 20),
+
+            // Payment ID
+            const Text(
+              'Payment ID: #12345678',
+              style: TextStyle(fontSize: 16),
+            ),
+
+            // Payment Amount
+            const Text(
+              'Amount: \$12.34',
+              style: TextStyle(fontSize: 16),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Countdown Timer
+            Text(
+              'Expires in: ${formatDuration(countdownDuration)}',
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
