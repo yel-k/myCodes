@@ -1,4 +1,152 @@
-KBZPay နှင့်ငွေပေးချေရန်
-ဘောင်ချာနံပါတ်
-စုစုပေါင်းကျသင့်ငွေ
-ငွေပေးချေရန် QR ကုတ်ကို စကင်ဖတ်ပါ
+import 'dart:async';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+class WebSocketManager {
+  final String url;
+  final Duration reconnectInterval;
+  final Duration timeout;
+  final Function(dynamic) onDesiredResult;
+  final Function()? onTimeout;
+  
+  WebSocketChannel? _channel;
+  Timer? _reconnectTimer;
+  Timer? _timeoutTimer;
+  bool _isClosed = false;
+
+  WebSocketManager({
+    required this.url,
+    this.reconnectInterval = const Duration(seconds: 30),
+    this.timeout = const Duration(minutes: 5),
+    required this.onDesiredResult,
+    this.onTimeout,
+  });
+
+  void connect() {
+    _isClosed = false;
+    _connectInternal();
+    _startTimeoutTimer();
+  }
+
+  void _connectInternal() {
+    _channel = WebSocketChannel.connect(Uri.parse(url));
+    
+    _channel!.stream.listen(
+      (data) {
+        // Check if this is the desired result
+        if (_isDesiredResult(data)) {
+          onDesiredResult(data);
+          close(); // Close connection when desired result is received
+        }
+      },
+      onError: (error) {
+        print('WebSocket error: $error');
+        _scheduleReconnect();
+      },
+      onDone: () {
+        if (!_isClosed) {
+          print('WebSocket closed, reconnecting...');
+          _scheduleReconnect();
+        }
+      },
+    );
+  }
+
+  bool _isDesiredResult(dynamic data) {
+    // Implement your logic to check if the received data is the desired result
+    // For example:
+    // return data['status'] == 'success';
+    return true; // Modify this according to your needs
+  }
+
+  void _scheduleReconnect() {
+    if (_isClosed) return;
+    
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(reconnectInterval, () {
+      if (!_isClosed) {
+        _connectInternal();
+      }
+    });
+  }
+
+  void _startTimeoutTimer() {
+    _timeoutTimer?.cancel();
+    _timeoutTimer = Timer(timeout, () {
+      if (!_isClosed) {
+        print('WebSocket connection timed out');
+        onTimeout?.call();
+        close();
+      }
+    });
+  }
+
+  void close() {
+    _isClosed = true;
+    _reconnectTimer?.cancel();
+    _timeoutTimer?.cancel();
+    _channel?.sink.close();
+  }
+}
+
+void main() {
+  final wsManager = WebSocketManager(
+    url: 'wss://your-websocket-url.com',
+    onDesiredResult: (data) {
+      print('Desired result received: $data');
+      // Handle the desired result
+    },
+    onTimeout: () {
+      print('Failed to get desired result within timeout period');
+      // Handle timeout case
+    },
+  );
+
+  // Start the connection
+  wsManager.connect();
+
+  // Don't forget to close when done (e.g., when widget is disposed)
+  // wsManager.close();
+}
+
+class MyWebSocketWidget extends StatefulWidget {
+  @override
+  _MyWebSocketWidgetState createState() => _MyWebSocketWidgetState();
+}
+
+class _MyWebSocketWidgetState extends State<MyWebSocketWidget> {
+  late WebSocketManager _wsManager;
+
+  @override
+  void initState() {
+    super.initState();
+    _wsManager = WebSocketManager(
+      url: 'wss://your-websocket-url.com',
+      onDesiredResult: (data) {
+        // Update UI with the desired result
+        setState(() {
+          // Update your state here
+        });
+      },
+      onTimeout: () {
+        // Show timeout message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Operation timed out')),
+        );
+      },
+    );
+    _wsManager.connect();
+  }
+
+  @override
+  void dispose() {
+    _wsManager.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // Your widget implementation
+    );
+  }
+}
