@@ -1,0 +1,143 @@
+import 'dart:convert';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/io.dart';
+
+class PresenceChatListener {
+  final String channelId;
+  final String userId;
+  final String userInfo;
+  final Function(Map<String, dynamic>) onPresenceUpdate;
+  final Function(String) onMessage;
+  final Function(String) onError;
+
+  late WebSocketChannel _channel;
+  String? _socketId;
+  String? _authToken;
+
+  PresenceChatListener({
+    required this.channelId,
+    required this.userId,
+    required this.userInfo,
+    required this.onPresenceUpdate,
+    required this.onMessage,
+    required this.onError,
+  });
+
+  Future<void> connect() async {
+    try {
+      // Step 1: Get socket ID
+      final initialChannel = IOWebSocketChannel.connect(
+        Uri.parse('wss://your-server.com/ws'),
+      );
+
+      await for (var message in initialChannel.stream) {
+        final data = jsonDecode(message);
+        if (data['event'] == 'socket_id') {
+          _socketId = data['data']['socket_id'];
+          initialChannel.sink.close();
+          break;
+        }
+      }
+
+      if (_socketId == null) throw Exception('Failed to get socket ID');
+
+      // Step 2: Get auth token (implement your API call)
+      _authToken = await _fetchAuthToken(_socketId!);
+
+      // Step 3: Connect with auth and subscribe
+      _channel = IOWebSocketChannel.connect(
+        Uri.parse('wss://your-server.com/ws'),
+        headers: {'Authorization': 'Bearer $_authToken'},
+      );
+
+      _channel.sink.add(jsonEncode({
+        'event': 'subscribe',
+        'data': {
+          'channel': 'presence-chat.$channelId',
+          'auth': _authToken,
+          'channel_data': {
+            'user_id': userId,
+            'user_info': jsonDecode(userInfo),
+          },
+        },
+      }));
+
+      // Listen for messages
+      _channel.stream.listen(
+        (message) => _handleMessage(message),
+        onError: (err) => onError(err.toString()),
+        onDone: () => onError('Connection closed'),
+      );
+    } catch (e) {
+      onError(e.toString());
+      rethrow;
+    }
+  }
+
+  Future<String> _fetchAuthToken(String socketId) async {
+    // Implement your actual auth token API call here
+    return 'your-auth-token';
+  }
+
+  void _handleMessage(dynamic message) {
+    try {
+      final data = jsonDecode(message);
+      
+      if (data['event']?.contains('presence') ?? false) {
+        onPresenceUpdate(data);
+      } else if (data['event'] == 'chat_message') {
+        onMessage(data['data']['message']);
+      }
+    } catch (e) {
+      onError('Message handling error: $e');
+    }
+  }
+
+  void sendMessage(String message) {
+    _channel.sink.add(jsonEncode({
+      'event': 'client-message',
+      'data': {
+        'channel': 'presence-chat.$channelId',
+        'message': message,
+        'user_id': userId,
+      },
+    }));
+  }
+
+  void disconnect() {
+    _channel.sink.close();
+  }
+}
+
+
+
+
+
+// Create listener instance
+final listener = PresenceChatListener(
+  channelId: '123',
+  userId: 'user_123',
+  userInfo: jsonEncode({'name': 'John Doe'}),
+  onPresenceUpdate: (data) {
+    print('Presence update: $data');
+    // Update your UI with presence data
+  },
+  onMessage: (message) {
+    print('New message: $message');
+    // Add message to your chat UI
+  },
+  onError: (error) {
+    print('Error: $error');
+    // Show error to user
+  },
+);
+
+// Connect
+await listener.connect();
+
+// Send message
+listener.sendMessage('Hello world!');
+
+// Disconnect when done
+listener.disconnect();
+
