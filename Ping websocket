@@ -1,0 +1,128 @@
+import 'package:flutter/material.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:web_socket_channel/status.dart' as status;
+
+class WebSocketExample extends StatefulWidget {
+  const WebSocketExample({super.key});
+
+  @override
+  State<WebSocketExample> createState() => _WebSocketExampleState();
+}
+
+class _WebSocketExampleState extends State<WebSocketExample> {
+  late WebSocketChannel _channel;
+  Timer? _pingTimer;
+  final String _webSocketUrl = 'wss://yourserver.com/ws'; // Replace with your WebSocket URL
+
+  @override
+  void initState() {
+    super.initState();
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() {
+    // Close any existing connection
+    _channel.sink.close();
+
+    // Create new connection
+    _channel = WebSocketChannel.connect(
+      Uri.parse(_webSocketUrl),
+    );
+
+    // Start ping timer
+    _startPingTimer();
+
+    // Listen for messages
+    _channel.stream.listen(
+      (message) {
+        debugPrint('Received: $message');
+        // Handle incoming messages here
+      },
+      onError: (error) {
+        debugPrint('WebSocket error: $error');
+        _reconnect();
+      },
+      onDone: () {
+        debugPrint('WebSocket connection closed');
+        _reconnect();
+      },
+    );
+  }
+
+  void _startPingTimer() {
+    // Cancel existing timer if any
+    _pingTimer?.cancel();
+    
+    // Send ping immediately
+    _sendPing();
+    
+    // Then send ping every 30 seconds
+    _pingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _sendPing();
+    });
+  }
+
+  void _sendPing() {
+    try {
+      if (_channel.closeCode == null) {
+        debugPrint('Sending ping');
+        _channel.sink.add('ping');
+      } else {
+        debugPrint('Cannot send ping - connection closed');
+        _reconnect();
+      }
+    } catch (e) {
+      debugPrint('Error sending ping: $e');
+      _reconnect();
+    }
+  }
+
+  void _reconnect() {
+    // Cancel the ping timer
+    _pingTimer?.cancel();
+    
+    // Try to reconnect after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) {
+        _connectWebSocket();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pingTimer?.cancel();
+    _channel.sink.close(status.goingAway);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('WebSocket Example')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            StreamBuilder(
+              stream: _channel.stream,
+              builder: (context, snapshot) {
+                return Text(
+                  snapshot.hasData ? 'Latest message: ${snapshot.data}' : 'No message yet',
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                // Example: Send a message
+                _channel.sink.add('Hello from Flutter!');
+              },
+              child: const Text('Send Message'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
