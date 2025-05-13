@@ -1,0 +1,30 @@
+// web_socket_provider.dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'web_socket_manager.dart';
+
+final webSocketManagerProvider = Provider<WebSocketManager>((ref) {
+  final manager = WebSocketManager(
+    url: 'wss://your-websocket-url.com',
+    onDesiredResult: (data) {
+      // Broadcast messages to any listeners
+      ref.read(webSocketMessagesProvider.notifier).state = data;
+    },
+    onTimeout: () {
+      // Broadcast timeout events
+      ref.read(webSocketTimeoutProvider.notifier).state = true;
+    },
+  );
+  
+  // Auto-connect when provider is initialized
+  manager.connect();
+  
+  // Dispose when provider is disposed
+  ref.onDispose(() => manager.dispose());
+  
+  return manager;
+});
+
+// Supporting providers for state management
+final webSocketMessagesProvider = StateProvider<dynamic>((_) => null);
+final webSocketTimeoutProvider = StateProvider<bool>((_) => false);
+final webSocketStatusProvider = StateProvider<bool>((_) => false);
